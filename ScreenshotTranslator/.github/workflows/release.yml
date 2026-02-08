@@ -1,4 +1,4 @@
-name: 🚀 全自动构建发布
+name: Auto Build and Release
 
 on:
   push:
@@ -17,17 +17,17 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: 签出代码
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 安装 .NET 8
+      - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: 自动计算版本号
+      - name: Calculate version
         id: version
         shell: pwsh
         run: |
@@ -40,23 +40,19 @@ jobs:
             $major = [int]$parts[0]
             $minor = [int]$parts[1]
             $patch = [int]$parts[2] + 1
-
-            # commit message 决定版本号递增方式
             $msg = git log -1 --pretty=%B
             if ($msg -match '(?i)^(breaking|major)') {
               $major++; $minor = 0; $patch = 0
             } elseif ($msg -match '(?i)^(feat|feature|minor)') {
               $minor++; $patch = 0
             }
-
             $newVer = "$major.$minor.$patch"
           }
-
           echo "VERSION=$newVer" >> $env:GITHUB_OUTPUT
           echo "TAG=v$newVer" >> $env:GITHUB_OUTPUT
-          Write-Host "📦 将发布版本: v$newVer"
+          Write-Host "Version: v$newVer"
 
-      - name: 编译发布
+      - name: Publish
         shell: pwsh
         run: |
           dotnet publish "src\ScreenshotTranslator\ScreenshotTranslator.csproj" `
@@ -66,13 +62,13 @@ jobs:
             -p:Version=${{ steps.version.outputs.VERSION }} `
             -o "./publish"
 
-      - name: 打包 ZIP
+      - name: Create ZIP
         shell: pwsh
         run: |
           Compress-Archive -Path "./publish/*" `
             -DestinationPath "./ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip" -Force
 
-      - name: 生成更新日志
+      - name: Generate changelog
         id: changelog
         shell: pwsh
         run: |
@@ -82,13 +78,13 @@ jobs:
           } else {
             $log = git log --pretty=format:"- %s"
           }
-          if (-not $log) { $log = "- 初始发布" }
+          if (-not $log) { $log = "- Initial release" }
           $delimiter = "EOF_$(Get-Random)"
           echo "CHANGELOG<<$delimiter" >> $env:GITHUB_OUTPUT
           echo $log >> $env:GITHUB_OUTPUT
           echo "$delimiter" >> $env:GITHUB_OUTPUT
 
-      - name: 创建 Tag 并推送
+      - name: Create tag
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
@@ -96,32 +92,32 @@ jobs:
           git tag ${{ steps.version.outputs.TAG }}
           git push origin ${{ steps.version.outputs.TAG }}
 
-      - name: 发布到 GitHub Releases
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.TAG }}
           name: "ScreenshotTranslator ${{ steps.version.outputs.TAG }}"
           body: |
-            ## 📦 ScreenshotTranslator ${{ steps.version.outputs.TAG }}
+            ## ScreenshotTranslator ${{ steps.version.outputs.TAG }}
 
-            ### 📥 安装方法
-            1. 下载下方 **ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip**
-            2. 解压到任意文件夹
-            3. 双击 **ScreenshotTranslator.exe** 即可运行
+            ### Download
+            1. Download **ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip**
+            2. Extract to any folder
+            3. Run **ScreenshotTranslator.exe**
 
-            ### ⌨️ 快捷键
-            | 快捷键 | 功能 |
-            |--------|------|
-            | `Ctrl+Shift+A` | 区域截图 |
-            | `Ctrl+Shift+F` | 全屏截图 |
-            | `Ctrl+Shift+T` | 截图翻译 |
-            | `Ctrl+Shift+O` | OCR识别 |
+            ### Hotkeys
+            | Hotkey | Function |
+            |--------|----------|
+            | Ctrl+Shift+A | Region capture |
+            | Ctrl+Shift+F | Fullscreen capture |
+            | Ctrl+Shift+T | Capture and translate |
+            | Ctrl+Shift+O | OCR recognition |
 
-            ### 📝 更新内容
+            ### Changes
             ${{ steps.changelog.outputs.CHANGELOG }}
 
             ---
-            > 💻 系统要求：Windows 10 1903+，无需安装任何运行时
+            > Requires: Windows 10 1903+, no runtime needed
           files: |
             ./ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip
           draft: false
