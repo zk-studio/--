@@ -31,7 +31,13 @@ jobs:
         id: version
         shell: pwsh
         run: |
+          $latestTag = $null
           $latestTag = git describe --tags --abbrev=0 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            $latestTag = $null
+            $LASTEXITCODE = 0
+          }
+
           if (-not $latestTag) {
             $newVer = "1.0.0"
           } else {
