@@ -1,130 +1,128 @@
-name: Build and Release
+name: 🚀 全自动构建发布
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: '版本号 (例如: 1.0.0)'
-        required: true
-        default: '1.0.0'
+    branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'scripts/**'
 
-env:
-  DOTNET_VERSION: '8.0.x'
-  PROJECT_PATH: 'src/ScreenshotTranslator/ScreenshotTranslator.csproj'
+permissions:
+  contents: write
 
 jobs:
-  build:
+  build-and-release:
     runs-on: windows-latest
-    
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: 签出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+      - name: 安装 .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Determine version
-      id: version
-      shell: pwsh
-      run: |
-        if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-          $version = "${{ github.event.inputs.version }}"
-        } else {
-          $version = "${{ github.ref_name }}".TrimStart('v')
-        }
-        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-        echo "Version: $version"
+      - name: 自动计算版本号
+        id: version
+        shell: pwsh
+        run: |
+          $latestTag = git describe --tags --abbrev=0 2>$null
+          if (-not $latestTag) {
+            $newVer = "1.0.0"
+          } else {
+            $ver = $latestTag -replace '^v', ''
+            $parts = $ver.Split('.')
+            $major = [int]$parts[0]
+            $minor = [int]$parts[1]
+            $patch = [int]$parts[2] + 1
 
-    - name: Restore dependencies
-      run: dotnet restore ${{ env.PROJECT_PATH }}
+            # commit message 决定版本号递增方式
+            $msg = git log -1 --pretty=%B
+            if ($msg -match '(?i)^(breaking|major)') {
+              $major++; $minor = 0; $patch = 0
+            } elseif ($msg -match '(?i)^(feat|feature|minor)') {
+              $minor++; $patch = 0
+            }
 
-    - name: Build
-      run: dotnet build ${{ env.PROJECT_PATH }} -c Release --no-restore -p:Version=${{ steps.version.outputs.VERSION }}
+            $newVer = "$major.$minor.$patch"
+          }
 
-    - name: Publish
-      run: |
-        dotnet publish ${{ env.PROJECT_PATH }} -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.version.outputs.VERSION }} -o ./publish
+          echo "VERSION=$newVer" >> $env:GITHUB_OUTPUT
+          echo "TAG=v$newVer" >> $env:GITHUB_OUTPUT
+          Write-Host "📦 将发布版本: v$newVer"
 
-    - name: Install Velopack
-      run: dotnet tool install -g vpk
+      - name: 编译发布
+        shell: pwsh
+        run: |
+          dotnet publish "src\ScreenshotTranslator\ScreenshotTranslator.csproj" `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:Version=${{ steps.version.outputs.VERSION }} `
+            -o "./publish"
 
-    - name: Pack with Velopack
-      shell: pwsh
-      run: |
-        vpk pack --packId ScreenshotTranslator --packVersion ${{ steps.version.outputs.VERSION }} --packDir ./publish --mainExe ScreenshotTranslator.exe --outputDir ./releases
+      - name: 打包 ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "./publish/*" `
+            -DestinationPath "./ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip" -Force
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-packages
-        path: ./releases/*
+      - name: 生成更新日志
+        id: changelog
+        shell: pwsh
+        run: |
+          $prevTag = git describe --tags --abbrev=0 2>$null
+          if ($prevTag) {
+            $log = git log --pretty=format:"- %s" "$prevTag..HEAD"
+          } else {
+            $log = git log --pretty=format:"- %s"
+          }
+          if (-not $log) { $log = "- 初始发布" }
+          $delimiter = "EOF_$(Get-Random)"
+          echo "CHANGELOG<<$delimiter" >> $env:GITHUB_OUTPUT
+          echo $log >> $env:GITHUB_OUTPUT
+          echo "$delimiter" >> $env:GITHUB_OUTPUT
 
-    - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v2
-      with:
-        name: ScreenshotTranslator v${{ steps.version.outputs.VERSION }}
-        body: |
-          ## 截图翻译工具 v${{ steps.version.outputs.VERSION }}
-          
-          ### 📥 下载
-          - **ScreenshotTranslator-Setup.exe** - 安装包（推荐）
-          - **ScreenshotTranslator-Portable.zip** - 便携版
-          
-          ### ✨ 更新内容
-          - 请查看 [CHANGELOG](../../blob/main/CHANGELOG.md)
-          
-          ### 🔧 系统要求
-          - Windows 10 1903 或更高版本
-          - .NET 8.0 Runtime
-        files: |
-          ./releases/*
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 创建 Tag 并推送
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.TAG }}
+          git push origin ${{ steps.version.outputs.TAG }}
 
-  # 便携版打包
-  portable:
-    runs-on: windows-latest
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: 发布到 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: "ScreenshotTranslator ${{ steps.version.outputs.TAG }}"
+          body: |
+            ## 📦 ScreenshotTranslator ${{ steps.version.outputs.TAG }}
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+            ### 📥 安装方法
+            1. 下载下方 **ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip**
+            2. 解压到任意文件夹
+            3. 双击 **ScreenshotTranslator.exe** 即可运行
 
-    - name: Determine version
-      id: version
-      shell: pwsh
-      run: |
-        $version = "${{ github.ref_name }}".TrimStart('v')
-        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+            ### ⌨️ 快捷键
+            | 快捷键 | 功能 |
+            |--------|------|
+            | `Ctrl+Shift+A` | 区域截图 |
+            | `Ctrl+Shift+F` | 全屏截图 |
+            | `Ctrl+Shift+T` | 截图翻译 |
+            | `Ctrl+Shift+O` | OCR识别 |
 
-    - name: Publish portable
-      run: |
-        dotnet publish ${{ env.PROJECT_PATH }} -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.version.outputs.VERSION }} -o ./portable
+            ### 📝 更新内容
+            ${{ steps.changelog.outputs.CHANGELOG }}
 
-    - name: Create zip
-      shell: pwsh
-      run: |
-        Compress-Archive -Path ./portable/* -DestinationPath ./ScreenshotTranslator-v${{ steps.version.outputs.VERSION }}-Portable.zip
-
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: ./ScreenshotTranslator-v${{ steps.version.outputs.VERSION }}-Portable.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ---
+            > 💻 系统要求：Windows 10 1903+，无需安装任何运行时
+          files: |
+            ./ScreenshotTranslator-${{ steps.version.outputs.TAG }}-Windows-x64.zip
+          draft: false
+          prerelease: false
