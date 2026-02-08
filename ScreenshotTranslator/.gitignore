@@ -1,0 +1,31 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+## VS
+.vs/
+*.userprefs
+launchSettings.json
+
+## Rider
+.idea/
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+## Build
+publish/
+releases/
+artifacts/
+
+## User data
+screenshots/
+settings.json

@@ -1,0 +1,115 @@
+<Window x:Class="ScreenshotTranslator.Views.CaptureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="截图"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        WindowState="Maximized"
+        Cursor="Cross"
+        ResizeMode="NoResize">
+
+    <Grid x:Name="MainGrid">
+        <!-- 屏幕截图背景 -->
+        <Image x:Name="BackgroundImage" Stretch="None" />
+
+        <!-- 遮罩层 -->
+        <Canvas x:Name="OverlayCanvas">
+            <!-- 上方遮罩 -->
+            <Rectangle x:Name="MaskTop" Fill="#80000000" />
+            <!-- 下方遮罩 -->
+            <Rectangle x:Name="MaskBottom" Fill="#80000000" />
+            <!-- 左方遮罩 -->
+            <Rectangle x:Name="MaskLeft" Fill="#80000000" />
+            <!-- 右方遮罩 -->
+            <Rectangle x:Name="MaskRight" Fill="#80000000" />
+            <!-- 全屏遮罩（初始状态） -->
+            <Rectangle x:Name="MaskFull" Fill="#80000000" />
+        </Canvas>
+
+        <!-- 选择框 -->
+        <Canvas x:Name="SelectionCanvas">
+            <Border x:Name="SelectionBorder"
+                    BorderBrush="#2196F3"
+                    BorderThickness="1.5"
+                    Visibility="Collapsed">
+                <!-- 尺寸提示 -->
+                <TextBlock x:Name="SizeText"
+                           Foreground="White"
+                           FontSize="12"
+                           Background="#CC2196F3"
+                           Padding="4,2"
+                           VerticalAlignment="Top"
+                           HorizontalAlignment="Left"
+                           Margin="0,-22,0,0" />
+            </Border>
+
+            <!-- 放大镜 -->
+            <Border x:Name="MagnifierBorder"
+                    Width="140" Height="140"
+                    BorderBrush="#2196F3"
+                    BorderThickness="2"
+                    Background="White"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Image x:Name="MagnifierImage"
+                           Stretch="None"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <ScaleTransform ScaleX="4" ScaleY="4" />
+                        </Image.RenderTransform>
+                    </Image>
+                    <!-- 十字线 -->
+                    <Line X1="70" Y1="0" X2="70" Y2="140" Stroke="#80FF0000" StrokeThickness="1" />
+                    <Line X1="0" Y1="70" X2="140" Y2="70" Stroke="#80FF0000" StrokeThickness="1" />
+                    <!-- 颜色和坐标提示 -->
+                    <TextBlock x:Name="MagnifierInfo"
+                               VerticalAlignment="Bottom"
+                               HorizontalAlignment="Center"
+                               Foreground="White"
+                               FontSize="10"
+                               Background="#CC000000"
+                               Padding="4,2"
+                               Margin="0,0,0,2" />
+                </Grid>
+            </Border>
+        </Canvas>
+
+        <!-- 工具栏（选择完区域后显示） -->
+        <Border x:Name="ToolBar"
+                Visibility="Collapsed"
+                Background="White"
+                CornerRadius="4"
+                Padding="4"
+                Height="40"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,60">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.3" />
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <Button Content="✓" ToolTip="确认" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Confirm_Click" />
+                <Button Content="✕" ToolTip="取消" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Cancel_Click" />
+                <Rectangle Width="1" Fill="#DDDDDD" Margin="4,4" />
+                <Button Content="📋" ToolTip="复制到剪贴板" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="CopyToClipboard_Click" />
+                <Button Content="💾" ToolTip="保存" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Save_Click" />
+                <Button Content="📌" ToolTip="钉到桌面" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Pin_Click" />
+                <Rectangle Width="1" Fill="#DDDDDD" Margin="4,4" />
+                <Button Content="✏️" ToolTip="编辑标注" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Edit_Click" />
+                <Button Content="🔍" ToolTip="OCR识别" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Ocr_Click" />
+                <Button Content="🌐" ToolTip="截图翻译" Width="32" Height="32"
+                        Style="{StaticResource ToolButton}" Click="Translate_Click" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

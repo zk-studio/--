@@ -1,0 +1,119 @@
+<Window x:Class="ScreenshotTranslator.Views.EditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="编辑截图"
+        Width="900" Height="650"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 工具栏 -->
+        <Border Grid.Row="0" Background="White" Padding="8,4"
+                BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal">
+                <!-- 形状工具 -->
+                <ToggleButton x:Name="BtnRect" Content="▭" ToolTip="矩形"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Rectangle" />
+                <ToggleButton x:Name="BtnEllipse" Content="○" ToolTip="椭圆"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Ellipse" />
+                <ToggleButton x:Name="BtnArrow" Content="➜" ToolTip="箭头"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Arrow" />
+                <ToggleButton x:Name="BtnLine" Content="╱" ToolTip="直线"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Line" />
+
+                <Rectangle Width="1" Fill="#DDDDDD" Margin="4,6" />
+
+                <!-- 画笔工具 -->
+                <ToggleButton x:Name="BtnPen" Content="✎" ToolTip="画笔"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="FreeDraw" />
+                <ToggleButton x:Name="BtnHighlight" Content="🖌" ToolTip="荧光笔"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Highlighter" />
+                <ToggleButton x:Name="BtnText" Content="A" ToolTip="文字"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Text" />
+                <ToggleButton x:Name="BtnMosaic" Content="▦" ToolTip="马赛克"
+                              Style="{StaticResource ToolToggleButton}" Click="ShapeTool_Click" Tag="Mosaic" />
+
+                <Rectangle Width="1" Fill="#DDDDDD" Margin="4,6" />
+
+                <!-- 颜色选择 -->
+                <StackPanel Orientation="Horizontal" Margin="4,0">
+                    <RadioButton x:Name="ColorRed" GroupName="Color" IsChecked="True"
+                                 Click="Color_Click" Tag="#FFFF0000" Margin="2">
+                        <Ellipse Width="20" Height="20" Fill="Red" />
+                    </RadioButton>
+                    <RadioButton x:Name="ColorBlue" GroupName="Color"
+                                 Click="Color_Click" Tag="#FF2196F3" Margin="2">
+                        <Ellipse Width="20" Height="20" Fill="#2196F3" />
+                    </RadioButton>
+                    <RadioButton x:Name="ColorGreen" GroupName="Color"
+                                 Click="Color_Click" Tag="#FF4CAF50" Margin="2">
+                        <Ellipse Width="20" Height="20" Fill="#4CAF50" />
+                    </RadioButton>
+                    <RadioButton x:Name="ColorYellow" GroupName="Color"
+                                 Click="Color_Click" Tag="#FFFFEB3B" Margin="2">
+                        <Ellipse Width="20" Height="20" Fill="#FFEB3B" />
+                    </RadioButton>
+                    <RadioButton x:Name="ColorWhite" GroupName="Color"
+                                 Click="Color_Click" Tag="#FFFFFFFF" Margin="2">
+                        <Ellipse Width="20" Height="20" Fill="White" Stroke="Gray" StrokeThickness="1" />
+                    </RadioButton>
+                    <RadioButton x:Name="ColorBlack" GroupName="Color"
+                                 Click="Color_Click" Tag="#FF000000" Margin="2">
+                        <Ellipse Width="20" Height="20" Fill="Black" />
+                    </RadioButton>
+                </StackPanel>
+
+                <Rectangle Width="1" Fill="#DDDDDD" Margin="4,6" />
+
+                <!-- 线条粗细 -->
+                <Slider x:Name="ThicknessSlider" Width="80" Minimum="1" Maximum="10" Value="2"
+                        VerticalAlignment="Center" Margin="4,0" ToolTip="线条粗细" />
+
+                <Rectangle Width="1" Fill="#DDDDDD" Margin="4,6" />
+
+                <!-- 操作按钮 -->
+                <Button Content="↩" ToolTip="撤销 (Ctrl+Z)"
+                        Style="{StaticResource ToolButton}" Click="Undo_Click" />
+                <Button Content="↪" ToolTip="重做 (Ctrl+Y)"
+                        Style="{StaticResource ToolButton}" Click="Redo_Click" />
+            </StackPanel>
+        </Border>
+
+        <!-- 编辑画布 -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto" Background="#333">
+            <Grid x:Name="CanvasContainer" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Margin="20">
+                <Image x:Name="EditImage" Stretch="None" />
+                <Canvas x:Name="DrawingCanvas"
+                        Background="Transparent"
+                        MouseLeftButtonDown="Canvas_MouseLeftButtonDown"
+                        MouseMove="Canvas_MouseMove"
+                        MouseLeftButtonUp="Canvas_MouseLeftButtonUp" />
+            </Grid>
+        </ScrollViewer>
+
+        <!-- 底部操作栏 -->
+        <Border Grid.Row="2" Background="White" Padding="12,8"
+                BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="📋 复制" Style="{StaticResource PrimaryButton}"
+                        Margin="4,0" Click="Copy_Click" />
+                <Button Content="💾 保存" Style="{StaticResource PrimaryButton}"
+                        Margin="4,0" Click="Save_Click" />
+                <Button Content="📌 钉图" Style="{StaticResource PrimaryButton}"
+                        Margin="4,0" Click="Pin_Click" />
+                <Button Content="🔍 OCR" Style="{StaticResource PrimaryButton}"
+                        Margin="4,0" Click="Ocr_Click" />
+                <Button Content="🌐 翻译" Style="{StaticResource PrimaryButton}"
+                        Margin="4,0" Click="Translate_Click" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

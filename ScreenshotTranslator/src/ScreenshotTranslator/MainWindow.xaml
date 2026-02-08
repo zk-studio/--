@@ -1,0 +1,38 @@
+<Window x:Class="ScreenshotTranslator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        Title="ScreenshotTranslator"
+        Width="0" Height="0"
+        WindowStyle="None"
+        ShowInTaskbar="False"
+        Visibility="Hidden"
+        AllowsTransparency="True"
+        Background="Transparent">
+
+    <Grid>
+        <!-- 系统托盘图标 -->
+        <tb:TaskbarIcon x:Name="TrayIcon"
+                        ToolTipText="截图翻译工具"
+                        DoubleClickCommand="{x:Null}"
+                        MenuActivation="RightClick">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="📷 区域截图 (Ctrl+Shift+A)" Click="RegionCapture_Click" />
+                    <MenuItem Header="🖥️ 全屏截图 (Ctrl+Shift+F)" Click="FullScreenCapture_Click" />
+                    <Separator />
+                    <MenuItem Header="🌐 截图翻译 (Ctrl+Shift+T)" Click="TranslateCapture_Click" />
+                    <MenuItem Header="🔍 OCR识别 (Ctrl+Shift+O)" Click="OcrCapture_Click" />
+                    <Separator />
+                    <MenuItem Header="📋 历史记录" Click="History_Click" />
+                    <MenuItem Header="⚙️ 设置" Click="Settings_Click" />
+                    <Separator />
+                    <MenuItem Header="🔄 检查更新" Click="CheckUpdate_Click" />
+                    <MenuItem Header="ℹ️ 关于" Click="About_Click" />
+                    <Separator />
+                    <MenuItem Header="❌ 退出" Click="Exit_Click" />
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+    </Grid>
+</Window>

@@ -1,0 +1,67 @@
+<Window x:Class="ScreenshotTranslator.Views.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="截图历史记录"
+        Width="700" Height="500"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundBrush}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="📋 截图历史记录" FontSize="16" FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+            <Button Content="🗑️ 清空" HorizontalAlignment="Right"
+                    Style="{StaticResource ToolButton}" Width="Auto" Padding="8,4"
+                    Click="Clear_Click" />
+        </Grid>
+
+        <ListBox Grid.Row="1" x:Name="HistoryList"
+                 SelectionMode="Single"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 BorderThickness="1" BorderBrush="#DDD">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1"
+                                Width="100" Height="75">
+                            <Image Source="{Binding FilePath}" Stretch="Uniform" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="12,0">
+                            <TextBlock Text="{Binding CaptureTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}'}"
+                                       FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Text="{Binding Width, StringFormat='{}{0} px'}"
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
+                                       Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding OcrText}" TextTrimming="CharacterEllipsis"
+                                       MaxWidth="300" Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="11" Margin="0,2,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="📋" ToolTip="复制" Style="{StaticResource ToolButton}"
+                                    Click="CopyItem_Click" Tag="{Binding Id}" />
+                            <Button Content="🗑️" ToolTip="删除" Style="{StaticResource ToolButton}"
+                                    Click="DeleteItem_Click" Tag="{Binding Id}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock Grid.Row="2" x:Name="CountText" Margin="0,8,0,0"
+                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" />
+    </Grid>
+</Window>

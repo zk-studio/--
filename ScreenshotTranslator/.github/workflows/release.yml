@@ -1,0 +1,130 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'src/ScreenshotTranslator/ScreenshotTranslator.csproj'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Determine version
+      id: version
+      shell: pwsh
+      run: |
+        if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+          $version = "${{ github.event.inputs.version }}"
+        } else {
+          $version = "${{ github.ref_name }}".TrimStart('v')
+        }
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "Version: $version"
+
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+
+    - name: Build
+      run: dotnet build ${{ env.PROJECT_PATH }} -c Release --no-restore -p:Version=${{ steps.version.outputs.VERSION }}
+
+    - name: Publish
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.version.outputs.VERSION }} -o ./publish
+
+    - name: Install Velopack
+      run: dotnet tool install -g vpk
+
+    - name: Pack with Velopack
+      shell: pwsh
+      run: |
+        vpk pack --packId ScreenshotTranslator --packVersion ${{ steps.version.outputs.VERSION }} --packDir ./publish --mainExe ScreenshotTranslator.exe --outputDir ./releases
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-packages
+        path: ./releases/*
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        name: ScreenshotTranslator v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## 截图翻译工具 v${{ steps.version.outputs.VERSION }}
+          
+          ### 📥 下载
+          - **ScreenshotTranslator-Setup.exe** - 安装包（推荐）
+          - **ScreenshotTranslator-Portable.zip** - 便携版
+          
+          ### ✨ 更新内容
+          - 请查看 [CHANGELOG](../../blob/main/CHANGELOG.md)
+          
+          ### 🔧 系统要求
+          - Windows 10 1903 或更高版本
+          - .NET 8.0 Runtime
+        files: |
+          ./releases/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 便携版打包
+  portable:
+    runs-on: windows-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Determine version
+      id: version
+      shell: pwsh
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+    - name: Publish portable
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:Version=${{ steps.version.outputs.VERSION }} -o ./portable
+
+    - name: Create zip
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ./portable/* -DestinationPath ./ScreenshotTranslator-v${{ steps.version.outputs.VERSION }}-Portable.zip
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ./ScreenshotTranslator-v${{ steps.version.outputs.VERSION }}-Portable.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
